@@ -14,6 +14,7 @@
  * limitations under the License.
  *
  */
+
 package org.elasticsearch.plugin.aknn;
 
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -25,6 +26,7 @@ import org.elasticsearch.client.node.NodeClient;
 import org.elasticsearch.common.StopWatch;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.settings.Settings;
+import org.elasticsearch.common.xcontent.LoggingDeprecationHandler;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentHelper;
 import org.elasticsearch.common.xcontent.XContentParser;
@@ -80,18 +82,20 @@ public class AknnRestAction extends BaseRestHandler {
 
     @Override
     protected RestChannelConsumer prepareRequest(RestRequest restRequest, NodeClient client) throws IOException {
-        if (restRequest.path().endsWith(NAME_SEARCH))
+        if (restRequest.path().endsWith(NAME_SEARCH)) {
             return handleSearchRequest(restRequest, client);
-        else if (restRequest.path().endsWith(NAME_INDEX))
+        } else if (restRequest.path().endsWith(NAME_INDEX)) {
             return handleIndexRequest(restRequest, client);
-        else
+        } else {
             return handleCreateRequest(restRequest, client);
+        }
     }
 
     public static Double euclideanDistance(List<Double> A, List<Double> B) {
         Double squaredDistance = 0.;
-        for (Integer i = 0; i < A.size(); i++)
+        for (Integer i = 0; i < A.size(); i++) {
             squaredDistance += Math.pow(A.get(i) - B.get(i), 2);
+        }
         return Math.sqrt(squaredDistance);
     }
 
@@ -151,7 +155,7 @@ public class AknnRestAction extends BaseRestHandler {
         logger.info("Compute exact distance and construct search hits");
         stopWatch.start("Compute exact distance and construct search hits");
         List<Map<String, Object>> modifiedSortedHits = new ArrayList<>();
-        for (SearchHit hit: approximateSearchResponse.getHits()) {
+        for (SearchHit hit : approximateSearchResponse.getHits()) {
             Map<String, Object> hitSource = hit.getSourceAsMap();
             @SuppressWarnings("unchecked")
             List<Double> hitVector = (List<Double>) hitSource.get(VECTOR_KEY);
@@ -197,9 +201,8 @@ public class AknnRestAction extends BaseRestHandler {
         StopWatch stopWatch = new StopWatch("StopWatch to time create request");
         logger.info("Parse request");
         stopWatch.start("Parse request");
-
-        XContentParser xContentParser = XContentHelper.createParser(
-                restRequest.getXContentRegistry(), restRequest.content(), restRequest.getXContentType());
+        XContentParser xContentParser = XContentHelper.createParser(restRequest.getXContentRegistry(),
+                LoggingDeprecationHandler.INSTANCE, restRequest.content());
         Map<String, Object> contentMap = xContentParser.mapOrdered();
         @SuppressWarnings("unchecked")
         Map<String, Object> sourceMap = (Map<String, Object>) contentMap.get("_source");
@@ -211,8 +214,7 @@ public class AknnRestAction extends BaseRestHandler {
         final Integer nbTables = (Integer) sourceMap.get("_aknn_nb_tables");
         final Integer nbBitsPerTable = (Integer) sourceMap.get("_aknn_nb_bits_per_table");
         final Integer nbDimensions = (Integer) sourceMap.get("_aknn_nb_dimensions");
-        @SuppressWarnings("unchecked")
-        final List<List<Double>> vectorSample = (List<List<Double>>) contentMap.get("_aknn_vector_sample");
+        @SuppressWarnings("unchecked") final List<List<Double>> vectorSample = (List<List<Double>>) contentMap.get("_aknn_vector_sample");
         stopWatch.stop();
 
         logger.info("Fit LSH model from sample vectors");
@@ -250,14 +252,13 @@ public class AknnRestAction extends BaseRestHandler {
 
         logger.info("Parse request parameters");
         stopWatch.start("Parse request parameters");
-        XContentParser xContentParser = XContentHelper.createParser(
-                restRequest.getXContentRegistry(), restRequest.content(), restRequest.getXContentType());
+        XContentParser xContentParser = XContentHelper.createParser(restRequest.getXContentRegistry(),
+                LoggingDeprecationHandler.INSTANCE, restRequest.content());
         Map<String, Object> contentMap = xContentParser.mapOrdered();
         final String index = (String) contentMap.get("_index");
         final String type = (String) contentMap.get("_type");
         final String aknnURI = (String) contentMap.get("_aknn_uri");
-        @SuppressWarnings("unchecked")
-        final List<Map<String, Object>> docs = (List<Map<String, Object>>) contentMap.get("_aknn_docs");
+        @SuppressWarnings("unchecked") final List<Map<String, Object>> docs = (List<Map<String, Object>>) contentMap.get("_aknn_docs");
         logger.info("Received {} docs for indexing", docs.size());
         stopWatch.stop();
 
@@ -266,7 +267,7 @@ public class AknnRestAction extends BaseRestHandler {
 
         // Check if the LshModel has been cached. If not, retrieve the Aknn document and use it to populate the model.
         LshModel lshModel;
-        if (! lshModelCache.containsKey(aknnURI)) {
+        if (!lshModelCache.containsKey(aknnURI)) {
 
             // Get the Aknn document.
             logger.info("Get Aknn model document from {}", aknnURI);
@@ -295,7 +296,7 @@ public class AknnRestAction extends BaseRestHandler {
         logger.info("Hash documents for indexing");
         stopWatch.start("Hash documents for indexing");
         BulkRequestBuilder bulkIndexRequest = client.prepareBulk();
-        for (Map<String, Object> doc: docs) {
+        for (Map<String, Object> doc : docs) {
             @SuppressWarnings("unchecked")
             Map<String, Object> source = (Map<String, Object>) doc.get("_source");
             @SuppressWarnings("unchecked")

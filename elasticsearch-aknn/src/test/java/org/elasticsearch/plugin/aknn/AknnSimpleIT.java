@@ -46,7 +46,7 @@ public class AknnSimpleIT extends ESIntegTestCase {
         Response response = restClient.performRequest("GET", "_cat/plugins");
         String body = EntityUtils.toString(response.getEntity());
         logger.info(body);
-        assertTrue(body.contains("elasticsearch-aknn"));
+        assertTrue(body.contains("aknn"));
     }
 
 }
